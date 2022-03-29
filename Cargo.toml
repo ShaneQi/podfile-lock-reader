@@ -1,5 +1,5 @@
 [package]
-name = "podfile_lock_reader"
+name = "podfile-lock-reader"
 version = "0.1.0"
 authors = ["Shane Qi <qizengtai@gmail.com>"]
 edition = "2018"
