@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 yaml-rust = "0.4.5"
 linked-hash-map = "0.5.4"
+clap = { version = "3.1.6", features = ["cargo"] }
