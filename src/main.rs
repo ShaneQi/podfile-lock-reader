@@ -34,29 +34,31 @@ fn main() {
             let csv_path = sub_matches.value_of("csv");
             let csv_module_name = sub_matches.value_of("module-column");
             let csv_carry_columns = sub_matches.values_of("carry-columns");
-            if let Some(_) = csv_path {
-                if let None = csv_module_name {
+            if let Some(csv_path) = csv_path {
+                if let Some(module_name) = csv_module_name {
+                    if let Some(carry_columns) = csv_carry_columns {
+                        if carry_columns.count() > 0 {
+                            let 
+                        } else {
+                            cmd.error(
+                                ErrorKind::ArgumentNotFound,
+                                "`carry-columns` needs at least one value when `csv` presents.",
+                            )
+                            .exit();
+                        }
+                    } else {
+                        cmd.error(
+                            ErrorKind::ArgumentNotFound,
+                            "`carry-columns` is required when `csv` presents.",
+                        )
+                        .exit();
+                    }
+                } else {
                     cmd.error(
                         ErrorKind::ArgumentNotFound,
                         "`module-column` is required when `csv` presents.",
                     )
                     .exit();
-                }
-                if let None = csv_carry_columns {
-                    cmd.error(
-                        ErrorKind::ArgumentNotFound,
-                        "`carry-columns` is required when `csv` presents.",
-                    )
-                    .exit();
-                }
-                if let Some(carry_columns) = csv_carry_columns {
-                    if carry_columns.count() == 0 {
-                        cmd.error(
-                            ErrorKind::ArgumentNotFound,
-                            "`carry-columns` needs at least one value when `csv` presents.",
-                        )
-                        .exit();
-                    }
                 }
             }
             let podfile_lock_path = sub_matches.value_of("podfilelock").unwrap();
