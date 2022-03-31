@@ -1,5 +1,5 @@
 extern crate yaml_rust;
-use clap::{arg, command, Command};
+use clap::{arg, command, Command, ErrorKind};
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashSet;
 use std::env;
@@ -9,24 +9,56 @@ use yaml_rust::Yaml;
 use yaml_rust::YamlLoader;
 
 fn main() {
-    let matches = command!()
+    let mut cmd = command!()
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(
             Command::new("dependencies")
                 .about("Get a list of denepdencies of each module.")
-                .arg(arg!(-r --recursive "Whether to count indirect dependencies recursively"))
                 .arg(arg!(-c --confluence "Whether to output in Confluence-friendly format"))
                 .arg(
                     arg!(-p --podfilelock <PODFILE_LOCK> "The path of the Podfile.lock.")
                         .required(false)
                         .default_value("Podfile.lock"),
-                ),
-        )
-        .get_matches();
+                )
+                .arg(arg!(-r --recursive "Whether to count indirect dependencies recursively"))
+                .arg(arg!(-s --csv <CSV> "Names of the colums that need to be carried over to output from the csv file.").required(false))
+                .arg(arg!(-t --"module-column" <COLUMN> "Name of the colum for module names in the csv file.").required(false))
+                .arg(arg!(-u --"carry-columns" <COLUMNS> "Names of the colums that need to be carried over to output from the csv file.").required(false).min_values(1))
+                ,
+        );
+    let matches = cmd.get_matches_mut();
 
     match matches.subcommand() {
         Some(("dependencies", sub_matches)) => {
+            let csv_path = sub_matches.value_of("csv");
+            let csv_module_name = sub_matches.value_of("module-column");
+            let csv_carry_columns = sub_matches.values_of("carry-columns");
+            if let Some(_) = csv_path {
+                if let None = csv_module_name {
+                    cmd.error(
+                        ErrorKind::ArgumentNotFound,
+                        "`module-column` is required when `csv` presents.",
+                    )
+                    .exit();
+                }
+                if let None = csv_carry_columns {
+                    cmd.error(
+                        ErrorKind::ArgumentNotFound,
+                        "`carry-columns` is required when `csv` presents.",
+                    )
+                    .exit();
+                }
+                if let Some(carry_columns) = csv_carry_columns {
+                    if carry_columns.count() == 0 {
+                        cmd.error(
+                            ErrorKind::ArgumentNotFound,
+                            "`carry-columns` needs at least one value when `csv` presents.",
+                        )
+                        .exit();
+                    }
+                }
+            }
             let podfile_lock_path = sub_matches.value_of("podfilelock").unwrap();
             let contents = fs::read_to_string(podfile_lock_path)
                 .expect("Something went wrong reading the file");
@@ -59,7 +91,12 @@ fn main() {
             <th colspan="1">Module</th>
             <th colspan="1">Depends on these modules ({})</th>
             <th colspan="1">Count</th>
-        </tr>"#, if recursive { "including indirect" } else { "direct only" }
+        </tr>"#,
+                    if recursive {
+                        "including indirect"
+                    } else {
+                        "direct only"
+                    }
                 );
                 for key in map.keys() {
                     let dependencies = if recursive {
@@ -67,7 +104,8 @@ fn main() {
                     } else {
                         map[key].to_owned()
                     };
-                    let dependencies_string: Vec<String> = dependencies.iter().map(|d|{ format!("* {}", d)}).collect();
+                    let dependencies_string: Vec<String> =
+                        dependencies.iter().map(|d| format!("* {}", d)).collect();
                     println!(
                         r#"
             <tr>
